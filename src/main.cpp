@@ -2,11 +2,19 @@
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <PubSubClient.h>
 
 #include "secrets.h"
 
-std::string request = "POST /trigger/" IFTTT_EVENT_NAME "/json/with/key/" IFTTT_KEY " HTTP/1.1\r\nHost: maker.ifttt.com\r\n\r\n";
+// getVCC returns in milllivolts, around 2.5VCC seems to be good enough
+#define LOW_BATTERY (2500)
+#define MQTT_CLIENT_SUBJECT ("subject")
 
+ADC_MODE(ADC_VCC)
+
+const String client_id = "ESP8266-" + WiFi.macAddress();
+WiFiClient wifi_conn;
+PubSubClient mqtt(wifi_conn);
 void setup()
 {
 	Serial.begin(115200);
@@ -19,13 +27,17 @@ void setup()
 		Serial.print(F("."));
 	}
 	Serial.println(WiFi.localIP());
-	WiFiClient client;
-	Serial.println(client.connect("maker.ifttt.com", 80));
-	Serial.println(client.print(request.c_str()));
-	Serial.println(client.readString());
+	mqtt.setServer(MQTT_SERVER, MQTT_PORT);
+	mqtt.connect(client_id.c_str(), MQTT_USERNAME, MQTT_PASSWORD);
+	Serial.print("Client state ");
+	Serial.println(mqtt.state());
+	Serial.print("Publishing to server: ");
+	String data(ESP.getVcc());
+	Serial.println(mqtt.publish(MQTT_CLIENT_SUBJECT, data.c_str()));
+	
 }
 
 void loop()
 {
-
+	//ESP.deepSleep(ESP.deepSleepMax(), RF_DISABLED);
 }
